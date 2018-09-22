@@ -1,35 +1,34 @@
 package com.gfb.albumapp.activity;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.view.Menu;
+import android.telecom.Call;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import com.gfb.albumapp.R;
-import com.gfb.albumapp.adapter.AlbumAdapter;
-import com.gfb.albumapp.entity.Album;
-import com.gfb.albumapp.service.AlbumService;
-
-import java.util.List;
-
-import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
+import com.gfb.albumapp.adapter.UserAdapter;
+import com.gfb.albumapp.entity.User;
+import com.gfb.albumapp.service.UserService;
 
 public class MainActivity extends BaseActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener, UserAdapter.Callback {
 
     private RecyclerView recyclerView;
-    private LinearLayoutManager layoutManager;
+    private TextView tvName;
+    private TextView tvEmail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +38,9 @@ public class MainActivity extends BaseActivity
         setSupportActionBar(toolbar);
 
         recyclerView = findViewById(R.id.recyclerView);
-        layoutManager = new LinearLayoutManager(this);
+        tvName = findViewById(R.id.tvName);
+        tvEmail = findViewById(R.id.tvEmail);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setLayoutManager(layoutManager);
 
@@ -56,35 +57,16 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onStart() {
         super.onStart();
-        getAlbums();
+        getUsers();
     }
 
-    private void getAlbums() {
-        Observable<List<Album>> observable = AlbumService.getAlbums();
-        observable.subscribeOn(Schedulers.computation())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<List<Album>>() {
-                    @Override
-                    public void onSubscribe(Disposable d) {
+    private void getUsers() {
+        User user = UserService.findUserByEmail(UserService.getLocalUser(this));
+        tvEmail.setText(user.getEmail());
+        tvName.setText(user.getName());
+        UserAdapter adapter = new UserAdapter(UserService.getUsers(), this, this);
+        recyclerView.setAdapter(adapter);
 
-                    }
-
-                    @Override
-                    public void onNext(List<Album> albums) {
-                        AlbumAdapter adapter = new AlbumAdapter(albums, MainActivity.this);
-                        recyclerView.setAdapter(adapter);
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        e.printStackTrace();
-                    }
-
-                    @Override
-                    public void onComplete() {
-
-                    }
-                });
     }
 
     @Override
@@ -97,50 +79,106 @@ public class MainActivity extends BaseActivity
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
+        if (id == R.id.nav_home) {
+            showHome();
         } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+            showAlbums();
+        } else if (id == R.id.nav_logout) {
+            logout();
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showHome() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+    }
+
+    private void showAlbums() {
+        Intent intent = new Intent(this, AlbumsActivity.class);
+        startActivity(intent);
+    }
+
+    private void logout() {
+        UserService.saveLocalUser("", this);
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
+    @Override
+    public void onClickItem(User user) {
+        Intent intent = new Intent(this, RegisterActivity.class);
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("user", user);
+        intent.putExtras(bundle);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onClickDelete(User user) {
+        ConfirmartionDialog confirmartionDialog = new ConfirmartionDialog();
+        confirmartionDialog.setUser(user);
+        confirmartionDialog.setCallback(onClickYes());
+        confirmartionDialog.show(getSupportFragmentManager(), "dialog");
+    }
+
+    private ConfirmartionDialog.DialogCallback onClickYes() {
+        return new ConfirmartionDialog.DialogCallback() {
+            @Override
+            public void onClickYes(User user) {
+                User.delete(user);
+
+                if (UserService.getUsers().size() == 0) {
+                    showMessage(getString(R.string.disclaimer_no_users));
+                    logout();
+                } else {
+                    getUsers();
+                }
+            }
+        };
+    }
+
+    public static class ConfirmartionDialog extends DialogFragment {
+        DialogCallback callback;
+        User user;
+
+        public void setUser(User user) {
+            this.user = user;
+        }
+
+        public void setCallback(DialogCallback callback) {
+            this.callback = callback;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setMessage(R.string.disclamer_delete_user)
+                    .setPositiveButton(R.string.label_yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            callback.onClickYes(user);
+                        }
+                    })
+                    .setNegativeButton(R.string.label_no, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                        }
+                    });
+            return builder.create();
+        }
+
+        public interface DialogCallback {
+            void onClickYes(User user);
+        }
     }
 }
