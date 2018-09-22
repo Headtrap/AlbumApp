@@ -22,4 +22,5 @@
     <string name="disclaimer_user">Usuário atualmente logado:</string>
     <string name="label_all_users">Todos os usuários:</string>
     <string name="disclaimer_no_users">Todos os usuários foram deletados, cadastre um novo usuário para prosseguir.</string>
+    <string name="title_albums">Albuns</string>
 </resources>

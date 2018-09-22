@@ -2,6 +2,7 @@ package com.gfb.albumapp.activity;
 
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -15,6 +16,16 @@ public class BaseActivity extends AppCompatActivity {
             ab.setHomeButtonEnabled(true);
             ab.setDisplayShowHomeEnabled(true);
         }
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                onBackPressed();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+
     }
 
     public boolean checkEmpty(EditText editText) {

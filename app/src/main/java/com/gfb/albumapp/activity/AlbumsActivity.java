@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
+import android.widget.ProgressBar;
 
 import com.gfb.albumapp.R;
 import com.gfb.albumapp.adapter.AlbumAdapter;
@@ -20,6 +22,7 @@ import io.reactivex.schedulers.Schedulers;
 
 public class AlbumsActivity extends BaseActivity {
     private RecyclerView recyclerView;
+    private ProgressBar progress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +31,7 @@ public class AlbumsActivity extends BaseActivity {
         setupToolbar();
 
         recyclerView = findViewById(R.id.recyclerView);
+        progress = findViewById(R.id.progress);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setLayoutManager(layoutManager);
@@ -41,6 +45,7 @@ public class AlbumsActivity extends BaseActivity {
     }
 
     private void getAlbums() {
+        progress.setVisibility(View.VISIBLE);
         Observable<List<Album>> observable = AlbumService.getAlbums();
         observable.subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -64,7 +69,7 @@ public class AlbumsActivity extends BaseActivity {
 
                     @Override
                     public void onComplete() {
-
+                        progress.setVisibility(View.GONE);
                     }
                 });
     }

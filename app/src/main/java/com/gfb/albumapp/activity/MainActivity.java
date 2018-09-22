@@ -16,6 +16,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.telecom.Call;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 
 import com.gfb.albumapp.R;
@@ -29,6 +30,7 @@ public class MainActivity extends BaseActivity
     private RecyclerView recyclerView;
     private TextView tvName;
     private TextView tvEmail;
+    private TextView headerEmail;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +54,8 @@ public class MainActivity extends BaseActivity
 
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+        View header = navigationView.getHeaderView(0);
+        headerEmail = header.findViewById(R.id.tvEmail);
     }
 
     @Override
@@ -62,11 +66,13 @@ public class MainActivity extends BaseActivity
 
     private void getUsers() {
         User user = UserService.findUserByEmail(UserService.getLocalUser(this));
-        tvEmail.setText(user.getEmail());
-        tvName.setText(user.getName());
-        UserAdapter adapter = new UserAdapter(UserService.getUsers(), this, this);
-        recyclerView.setAdapter(adapter);
-
+        if (user != null) {
+            headerEmail.setText(user.getEmail());
+            tvEmail.setText(user.getEmail());
+            tvName.setText(user.getName());
+            UserAdapter adapter = new UserAdapter(UserService.getUsers(), this, this);
+            recyclerView.setAdapter(adapter);
+        }
     }
 
     @Override
@@ -94,7 +100,7 @@ public class MainActivity extends BaseActivity
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
-        return true;
+        return false;
     }
 
     private void showHome() {
